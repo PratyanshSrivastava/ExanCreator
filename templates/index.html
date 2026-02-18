@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ExamCraft – NCERT Exam Paper Generator</title>
+<style>
+/* ── Reset ───────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --k:#0a0a0a; --k2:#1a1a1a; --k3:#2e2e2e; --k4:#444;
+  --g6:#666; --g5:#888; --g4:#aaa; --g3:#ccc; --g2:#e0e0e0;
+  --g1:#f0f0f0; --g0:#f8f8f8; --w:#fff;
+  --r:6px; --sh:0 1px 4px rgba(0,0,0,.1);
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;color:var(--k);background:var(--g1)}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:var(--g3);border-radius:3px}
+
+/* ── Shell ───────────────────────────────────── */
+.shell{display:flex;flex-direction:column;height:100vh}
+/* Top bar */
+.topbar{
+  height:50px;min-height:50px;background:var(--k);
+  display:flex;align-items:center;padding:0 18px;gap:16px;
+  border-bottom:1px solid var(--k3);flex-shrink:0;z-index:100
+}
+.topbar-brand{font-size:17px;font-weight:800;color:var(--w);letter-spacing:-.3px}
+.topbar-tag{font-size:10px;background:var(--k3);color:var(--g4);padding:2px 8px;border-radius:10px;font-weight:600}
+.topbar-spacer{flex:1}
+.topbar-btns{display:flex;gap:8px}
+
+/* Workspace */
+.workspace{display:flex;flex:1;overflow:hidden}
+
+/* ── Sidebar ─────────────────────────────────── */
+.sidebar{
+  width:210px;min-width:210px;background:var(--k2);
+  display:flex;flex-direction:column;overflow-y:auto;
+  border-right:1px solid var(--k3)
+}
+.sb-section{padding:12px 16px 5px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--g5)}
+.nav-item{
+  display:flex;align-items:center;gap:9px;padding:9px 16px;
+  color:var(--g5);font-size:12.5px;cursor:pointer;transition:all .15s;
+  border-left:2px solid transparent;user-select:none
+}
+.nav-item:hover{background:rgba(255,255,255,.05);color:var(--w)}
+.nav-item.active{background:rgba(255,255,255,.08);color:var(--w);border-left-color:var(--w);font-weight:600}
+.nav-item.done{color:var(--g4)}
+.ni-num{
+  width:19px;height:19px;border-radius:50%;background:var(--k4);color:var(--g4);
+  font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0
+}
+.nav-item.active .ni-num{background:var(--w);color:var(--k)}
+.nav-item.done .ni-num{background:var(--k3);color:var(--g4)}
+
+.sb-stats{padding:10px 16px;border-top:1px solid var(--k3);border-bottom:1px solid var(--k3);display:flex;flex-direction:column;gap:5px}
+.sb-stat{display:flex;justify-content:space-between;align-items:center}
+.sb-stat-label{font-size:11px;color:var(--g5)}
+.sb-stat-val{font-size:12px;font-weight:700;color:var(--w)}
+.marks-over{color:#ff6b6b!important}
+.marks-full{color:#6ee88a!important}
+.mb-wrap{margin-top:4px}
+.mb-track{background:var(--k3);border-radius:2px;height:3px;overflow:hidden}
+.mb-fill{height:100%;background:var(--w);border-radius:2px;transition:width .3s}
+.mb-label{font-size:10px;color:var(--g5);margin-top:3px;text-align:right}
+
+.sb-foot{padding:12px 16px;border-top:1px solid var(--k3);margin-top:auto}
+
+/* ── Main Area ───────────────────────────────── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.pane{flex:1;overflow-y:auto;padding:20px 24px;display:none}
+.pane.active{display:block}
+
+/* ── Step Indicator ──────────────────────────── */
+.step-row{display:flex;background:var(--w);border:1px solid var(--g2);border-radius:var(--r);margin-bottom:18px;overflow:hidden}
+.step-cell{flex:1;padding:9px 12px;text-align:center;border-right:1px solid var(--g2);cursor:pointer;transition:background .15s}
+.step-cell:last-child{border-right:none}
+.step-cell .sc-num{font-size:15px;font-weight:800;color:var(--g3);line-height:1}
+.step-cell .sc-lbl{font-size:10px;color:var(--g4);margin-top:2px}
+.step-cell.sc-active{background:var(--k)}
+.step-cell.sc-active .sc-num,.step-cell.sc-active .sc-lbl{color:var(--w)}
+.step-cell.sc-done{background:var(--g0)}
+.step-cell.sc-done .sc-num{color:var(--k);font-size:13px}
+.step-cell.sc-done .sc-lbl{color:var(--g5)}
+.step-cell:hover:not(.sc-active){background:var(--g0)}
+
+/* ── Cards ───────────────────────────────────── */
+.card{background:var(--w);border:1px solid var(--g2);border-radius:var(--r);box-shadow:var(--sh);margin-bottom:14px;overflow:hidden}
+.card-h{padding:11px 16px;background:var(--g0);border-bottom:1px solid var(--g2);display:flex;align-items:center;justify-content:space-between}
+.card-h-title{font-size:14px;font-weight:700;color:var(--k)}
+.card-h-sub{font-size:11px;color:var(--g5);margin-top:1px}
+.card-b{padding:16px}
+
+/* ── Forms ───────────────────────────────────── */
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.fg-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fg-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.fg.full{grid-column:1/-1}
+.fl{font-size:11px;font-weight:600;color:var(--g6);text-transform:uppercase;letter-spacing:.4px}
+.fc{border:1px solid var(--g2);border-radius:5px;padding:7px 10px;font-size:13px;background:var(--w);color:var(--k);transition:border-color .15s;width:100%}
+.fc:focus{outline:none;border-color:var(--k4);box-shadow:0 0 0 2px rgba(0,0,0,.06)}
+.fc::placeholder{color:var(--g4)}
+textarea.fc{resize:vertical;min-height:68px;line-height:1.5}
+
+/* ── Buttons ─────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border-radius:5px;font-size:12px;font-weight:600;border:none;transition:all .15s;white-space:nowrap;cursor:pointer}
+.btn-k{background:var(--k);color:var(--w)}
+.btn-k:hover{background:var(--k3)}
+.btn-w{background:var(--w);color:var(--k);border:1.5px solid var(--g2)}
+.btn-w:hover{background:var(--g0);border-color:var(--g4)}
+.btn-ghost{background:transparent;color:var(--g6);border:1px solid var(--g2)}
+.btn-ghost:hover{background:var(--g1);color:var(--k)}
+.btn-danger{background:#fff0f0;color:#b00;border:1px solid #ffc0c0}
+.btn-danger:hover{background:#ffe0e0}
+.btn-sm{padding:5px 10px;font-size:11px}
+.btn-xs{padding:3px 7px;font-size:11px;border-radius:4px}
+.icon-btn{padding:5px;border-radius:4px;background:transparent;border:1px solid transparent;color:var(--g5);cursor:pointer;font-size:13px;line-height:1;transition:all .15s}
+.icon-btn:hover{background:var(--g1);color:var(--k);border-color:var(--g2)}
+
+/* ── Section Cards ───────────────────────────── */
+.sec-card{background:var(--w);border:1.5px solid var(--g2);border-radius:var(--r);margin-bottom:10px;overflow:hidden;box-shadow:var(--sh)}
+.sec-head{display:flex;align-items:stretch;cursor:pointer;user-select:none}
+.sec-letter{
+  width:50px;min-width:50px;background:var(--k);color:var(--w);
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;font-weight:800;flex-shrink:0
+}
+.sec-head-inner{
+  flex:1;padding:10px 14px;display:flex;align-items:center;gap:10px;
+  background:var(--g0);border-left:1px solid var(--g2);transition:background .15s
+}
+.sec-head:hover .sec-head-inner{background:var(--g1)}
+.sec-info{flex:1}
+.sec-name-disp{font-size:13.5px;font-weight:700;color:var(--k)}
+.sec-meta-disp{font-size:11px;color:var(--g5);margin-top:2px}
+.sec-badges{display:flex;gap:6px;align-items:center;flex-shrink:0}
+.pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;border:1px solid}
+.pill-k{background:var(--k);color:var(--w);border-color:var(--k)}
+.pill-o{background:transparent;border-color:var(--g3);color:var(--g6)}
+.sec-chev{color:var(--g4);font-size:11px;margin-left:6px;transition:transform .2s;display:inline-block}
+.sec-chev.open{transform:rotate(180deg)}
+.sec-body{display:none;border-top:1.5px solid var(--g2)}
+.sec-body.open{display:block}
+.sec-cfg{padding:14px 16px;background:var(--g0);border-bottom:1px solid var(--g2)}
+.sec-qs{padding:14px 16px}
+
+/* ── Question Items ──────────────────────────── */
+.q-list{display:flex;flex-direction:column;gap:7px}
+.q-item{background:var(--w);border:1px solid var(--g2);border-radius:5px;overflow:hidden;transition:box-shadow .15s}
+.q-item:hover{box-shadow:0 2px 10px rgba(0,0,0,.1);border-color:var(--g3)}
+.q-head{padding:9px 12px;display:flex;align-items:flex-start;gap:9px;background:var(--g0);border-bottom:1px solid var(--g2)}
+.q-circle{
+  width:21px;height:21px;border-radius:50%;background:var(--k);color:var(--w);
+  font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;margin-top:1px
+}
+.q-hc{flex:1;min-width:0}
+.q-text-disp{font-size:13px;font-weight:600;color:var(--k);line-height:1.4;word-break:break-word}
+.q-meta{margin-top:4px;display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.q-type-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:9px;border:1px solid;letter-spacing:.2px}
+.qtag-mcq{background:#f4f4f4;color:#222;border-color:#ccc}
+.qtag-vsa{background:#f6f6f6;color:#333;border-color:#ccc}
+.qtag-sa{background:#efefef;color:#222;border-color:#c5c5c5}
+.qtag-la{background:#e9e9e9;color:#111;border-color:#bbb}
+.qtag-fill{background:#f2f2f2;color:#333;border-color:#ccc}
+.qtag-match{background:#ededed;color:#222;border-color:#c5c5c5}
+.qtag-ar{background:#e8e8e8;color:#111;border-color:#bbb}
+.qtag-comp{background:#f3f3f3;color:#333;border-color:#ccc}
+.qtag-case{background:#f0f0f0;color:#222;border-color:#ccc}
+.qtag-tf{background:#eee;color:#222;border-color:#ccc}
+.qtag-num{background:#e8e8e8;color:#111;border-color:#bbb}
+.qtag-def{background:#f2f2f2;color:#333;border-color:#ccc}
+.marks-tag{font-size:11px;font-weight:700;color:var(--g6)}
+.meta-note{font-size:11px;color:var(--g5)}
+.q-acts{display:flex;gap:3px;align-items:flex-start;flex-shrink:0}
+.q-body{padding:9px 12px 11px}
+
+/* Question body content */
+.detail-block{margin-top:6px}
+.detail-lbl{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--g5);letter-spacing:.4px;margin-bottom:4px}
+.opts-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px}
+.opt-row{display:flex;align-items:baseline;gap:5px;font-size:12px;padding:2px 0}
+.opt-ltr{font-weight:700;color:var(--g5);min-width:18px;flex-shrink:0}
+.opt-txt{color:var(--k);flex:1}
+.opt-correct{font-weight:700;color:var(--k)}
+.passage-box{
+  font-size:11px;color:var(--g6);font-style:italic;
+  border:1px solid var(--g2);border-radius:4px;padding:7px 9px;
+  background:var(--g0);max-height:58px;overflow:hidden;
+  line-height:1.4;position:relative
+}
+.ar-block div{font-size:12px;margin-bottom:3px}
+.match-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 12px}
+.match-col-hdr{font-size:10px;font-weight:700;color:var(--g5);margin-bottom:3px}
+.match-row{font-size:12px;margin-bottom:2px}
+.parts-list{border-left:2px solid var(--g2);padding-left:10px;display:flex;flex-direction:column;gap:3px}
+.part-disp{display:flex;gap:7px;font-size:12px}
+.part-disp-lbl{font-weight:700;color:var(--g5);flex-shrink:0}
+.part-disp-txt{flex:1;color:var(--k)}
+.part-disp-m{color:var(--g5);font-style:italic;flex-shrink:0}
+.fill-stmts{display:flex;flex-direction:column;gap:2px}
+.fill-stmt{font-size:12px;color:var(--k)}
+
+/* Empty states */
+.empty-qs{text-align:center;padding:28px 16px;border:1.5px dashed var(--g2);border-radius:5px;color:var(--g5)}
+.empty-icon{font-size:26px;margin-bottom:6px;opacity:.5}
+.no-secs{text-align:center;padding:48px 16px;border:2px dashed var(--g2);border-radius:var(--r);color:var(--g5)}
+
+/* ── Modal ───────────────────────────────────── */
+.modal-bg{
+  position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;
+  display:none;align-items:flex-start;justify-content:center;
+  padding:28px 16px;overflow-y:auto
+}
+.modal-bg.open{display:flex}
+.modal{
+  background:var(--w);border-radius:8px;width:100%;max-width:660px;
+  box-shadow:0 24px 64px rgba(0,0,0,.3);margin:auto;overflow:hidden;
+  animation:mIn .18s ease
+}
+@keyframes mIn{from{opacity:0;transform:translateY(-10px) scale(.98)}}
+.modal-top{padding:14px 18px;background:var(--k);color:var(--w);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:14px;font-weight:700}
+.modal-close{background:none;border:none;color:var(--g5);font-size:19px;cursor:pointer;line-height:1;padding:2px;transition:color .15s}
+.modal-close:hover{color:var(--w)}
+.modal-body{padding:18px;max-height:calc(100vh - 130px);overflow-y:auto}
+.modal-foot{padding:12px 18px;background:var(--g0);border-top:1px solid var(--g2);display:flex;justify-content:flex-end;gap:8px}
+
+/* Type Picker */
+.type-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:16px}
+.type-tile{border:1.5px solid var(--g2);border-radius:5px;padding:7px 5px;text-align:center;cursor:pointer;transition:all .15s;background:var(--w)}
+.type-tile:hover{border-color:var(--k4);background:var(--g0)}
+.type-tile.sel{border-color:var(--k);background:var(--k)}
+.tt-icon{font-size:17px;line-height:1;margin-bottom:3px}
+.tt-name{font-size:10px;font-weight:700;color:var(--g6);letter-spacing:.1px;line-height:1.2}
+.type-tile.sel .tt-name{color:var(--w)}
+
+/* Options Editor */
+.opts-editor{display:flex;flex-direction:column;gap:5px}
+.opt-edit-row{display:flex;align-items:center;gap:7px}
+.opt-ltr-badge{
+  width:24px;height:24px;border-radius:50%;border:1.5px solid var(--g3);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:var(--g5);flex-shrink:0
+}
+.opt-edit-row.is-correct .opt-ltr-badge{background:var(--k);color:var(--w);border-color:var(--k)}
+.opt-correct-btn{font-size:10px;padding:3px 7px;border-radius:9px;border:1px solid var(--g3);background:var(--w);color:var(--g5);cursor:pointer;white-space:nowrap;transition:all .15s}
+.opt-edit-row.is-correct .opt-correct-btn{background:var(--k);color:var(--w);border-color:var(--k)}
+
+/* Parts Editor */
+.parts-editor{display:flex;flex-direction:column;gap:7px}
+.part-card{border:1px solid var(--g2);border-radius:5px;overflow:hidden}
+.part-card-h{padding:6px 10px;background:var(--g0);border-bottom:1px solid var(--g2);display:flex;justify-content:space-between;align-items:center}
+.part-card-lbl{font-size:12px;font-weight:700;color:var(--k4)}
+.part-card-b{padding:9px;display:grid;grid-template-columns:1fr 75px;gap:8px}
+
+/* Instructions */
+.preset-wrap{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px}
+.preset-chip{font-size:11px;padding:4px 10px;border-radius:11px;border:1px solid var(--g2);background:var(--w);color:var(--g6);cursor:pointer;transition:all .15s}
+.preset-chip:hover{border-color:var(--k);color:var(--k)}
+.preset-chip.used{background:var(--g1);color:var(--g4);border-color:var(--g2);cursor:default}
+.instr-list{display:flex;flex-direction:column;gap:6px}
+.instr-row{display:flex;gap:7px;align-items:center}
+.instr-num{font-size:12px;font-weight:700;color:var(--g4);min-width:20px;flex-shrink:0}
+
+/* ── Preview ─────────────────────────────────── */
+.preview-wrap{background:var(--g3);border-radius:var(--r);padding:18px;min-height:400px}
+.preview-a4{
+  background:var(--w);max-width:780px;margin:0 auto;
+  padding:56px 68px;box-shadow:0 4px 24px rgba(0,0,0,.22);
+  font-family:'Times New Roman',Times,serif;font-size:12pt;
+  color:#000;line-height:1.45;min-height:480px
+}
+.pv-school{text-align:center;font-size:16pt;font-weight:bold;text-transform:uppercase;margin-bottom:3px}
+.pv-exam{text-align:center;font-size:13pt;font-weight:bold;text-transform:uppercase;margin-bottom:3px}
+.pv-addr{text-align:center;font-size:10pt;margin-bottom:6px}
+.pv-rule{border-top:1.5px solid #000;margin:5px 0}
+.pv-meta{text-align:center;font-weight:bold;font-size:11pt;margin:4px 0}
+.pv-ih{font-weight:bold;font-size:11pt;text-decoration:underline;margin:7px 0 3px}
+.pv-il{margin-left:14px;font-size:10pt}
+.pv-il li{margin-bottom:2px}
+.pv-sec{text-align:center;font-weight:bold;font-size:12pt;text-transform:uppercase;margin:10px 0 3px;padding:3px;border-top:1px solid #000;border-bottom:1px solid #000}
+.pv-si{font-style:italic;font-size:10pt;margin-bottom:5px}
+.pv-qr{display:flex;gap:9px;margin:5px 0}
+.pv-qnum{min-width:26px;font-weight:bold}
+.pv-qb{flex:1}
+.pv-qt{font-size:12pt}
+.pv-qm{min-width:30px;text-align:right;font-style:italic}
+.pv-opts{font-size:11pt;margin-top:3px;display:flex;flex-wrap:wrap;gap:0 20px}
+.pv-parts{padding-left:18px;margin-top:3px}
+.pv-part{display:flex;gap:7px;font-size:11pt;margin-bottom:2px}
+.pv-passage{font-style:italic;font-size:10pt;margin:4px 0;padding:5px 8px;border-left:2px solid #999}
+
+/* ── Step nav bar ────────────────────────────── */
+.step-nav{background:var(--w);border-top:1px solid var(--g2);padding:11px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+
+/* ── Toast ───────────────────────────────────── */
+.toast{
+  position:fixed;bottom:18px;right:18px;
+  background:var(--k);color:var(--w);
+  padding:9px 16px;border-radius:6px;
+  font-size:13px;font-weight:500;z-index:9999;
+  opacity:0;transform:translateY(6px);transition:all .22s;pointer-events:none;max-width:300px
+}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.err{background:#b00}
+.toast.ok{background:#1a6622}
+
+/* ── Loader ──────────────────────────────────── */
+.loader-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000;display:none;align-items:center;justify-content:center}
+.loader-bg.show{display:flex}
+.loader-box{background:var(--w);border-radius:8px;padding:26px 40px;text-align:center}
+.spinner{width:34px;height:34px;border:3px solid var(--g2);border-top-color:var(--k);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 10px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Utilities ───────────────────────────────── */
+.row-sb{display:flex;justify-content:space-between;align-items:center}
+.row{display:flex;align-items:center;gap:8px}
+.sep{height:1px;background:var(--g2);margin:12px 0}
+.sep-dashed{height:0;border-top:1px dashed var(--g2);margin:12px 0}
+.muted{color:var(--g5)}
+.t-sm{font-size:11px}
+.t-xs{font-size:10px}
+.mt6{margin-top:6px}
+.mt10{margin-top:10px}
+.mt14{margin-top:14px}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ── Top Bar ─────────────────────────────── -->
+<div class="topbar">
+  <div class="topbar-brand">ExamCraft</div>
+  <span class="topbar-tag">NCERT India · Class 6–12</span>
+  <div class="topbar-spacer"></div>
+  <div class="topbar-btns">
+    <button class="btn btn-ghost btn-sm" style="color:#aaa;border-color:#444" onclick="saveToLocal()">💾 Save</button>
+    <button class="btn btn-ghost btn-sm" style="color:#aaa;border-color:#444" onclick="loadFromLocal()">📂 Load</button>
+    <button class="btn btn-k btn-sm" onclick="generateDocx()">⬇ Download .docx</button>
+  </div>
+</div>
+
+<div class="workspace">
+<!-- ── Sidebar ────────────────────────────── -->
+<nav class="sidebar">
+  <div class="sb-section">Steps</div>
+  <div class="nav-item active" id="nav1" onclick="showStep(1)">
+    <div class="ni-num" id="ns1">1</div><span>Paper Details</span>
+  </div>
+  <div class="nav-item" id="nav2" onclick="showStep(2)">
+    <div class="ni-num" id="ns2">2</div><span>Sections &amp; Questions</span>
+  </div>
+  <div class="nav-item" id="nav3" onclick="showStep(3)">
+    <div class="ni-num" id="ns3">3</div><span>Instructions</span>
+  </div>
+  <div class="nav-item" id="nav4" onclick="showStep(4)">
+    <div class="ni-num" id="ns4">4</div><span>Preview &amp; Export</span>
+  </div>
+
+  <div class="sb-stats" style="margin-top:8px">
+    <div class="t-xs muted" style="text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:2px">Paper Stats</div>
+    <div class="sb-stat"><span class="sb-stat-label">Sections</span><span class="sb-stat-val" id="s-sec">0</span></div>
+    <div class="sb-stat"><span class="sb-stat-label">Questions</span><span class="sb-stat-val" id="s-q">0</span></div>
+    <div class="sb-stat"><span class="sb-stat-label">Marks Used</span><span class="sb-stat-val" id="s-m">0</span></div>
+    <div class="sb-stat"><span class="sb-stat-label">Max Marks</span><span class="sb-stat-val" id="s-mm">—</span></div>
+    <div class="mb-wrap" id="mb-wrap" style="display:none">
+      <div class="mb-track"><div class="mb-fill" id="mb-fill" style="width:0%"></div></div>
+      <div class="mb-label" id="mb-label"></div>
+    </div>
+  </div>
+
+  <div class="sb-foot">
+    <button class="btn btn-ghost btn-sm" style="color:#888;border-color:#444;width:100%;justify-content:center" onclick="clearAll()">🗑 Clear All</button>
+  </div>
+</nav>
+
+<!-- ── Main ───────────────────────────────── -->
+<div class="main">
+
+<!-- ══ STEP 1: Details ══════════════════════ -->
+<div class="pane active" id="step1">
+  <div class="step-row">
+    <div class="step-cell sc-active"><div class="sc-num">1</div><div class="sc-lbl">Details</div></div>
+    <div class="step-cell" onclick="showStep(2)"><div class="sc-num">2</div><div class="sc-lbl">Sections</div></div>
+    <div class="step-cell" onclick="showStep(3)"><div class="sc-num">3</div><div class="sc-lbl">Instructions</div></div>
+    <div class="step-cell" onclick="showStep(4)"><div class="sc-num">4</div><div class="sc-lbl">Preview</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><div><div class="card-h-title">School Information</div><div class="card-h-sub">Appears in the paper header</div></div></div>
+    <div class="card-b">
+      <div class="fg-grid">
+        <div class="fg full" style="grid-column:1/-1">
+          <label class="fl">School Name *</label>
+          <input class="fc" id="schoolName" placeholder="e.g. Delhi Public School, Sector 45" oninput="updateStats()"/>
+        </div>
+        <div class="fg"><label class="fl">Address Line 1</label><input class="fc" id="schoolAddr1" placeholder="Street / Locality"/></div>
+        <div class="fg"><label class="fl">Address Line 2</label><input class="fc" id="schoolAddr2" placeholder="City, State – PIN"/></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><div><div class="card-h-title">Examination Details</div><div class="card-h-sub">Paper configuration</div></div></div>
+    <div class="card-b">
+      <div class="fg-grid">
+        <div class="fg">
+          <label class="fl">Class *</label>
+          <select class="fc" id="classGrade" onchange="updateStats()">
+            <option value="">Select Class</option>
+            {% for c in range(6,13) %}<option value="{{c}}">Class {{c}}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">Subject *</label>
+          <select class="fc" id="subject" onchange="autoFillCode();updateStats()">
+            <option value="">Select Subject</option>
+            {% for s in subjects %}<option value="{{s.name}}" data-code="{{s.code}}">{{s.name}}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">Subject Code</label>
+          <input class="fc" id="subjectCode" placeholder="Auto-filled"/>
+        </div>
+        <div class="fg">
+          <label class="fl">Exam Type *</label>
+          <select class="fc" id="examType" onchange="updateStats()">
+            <option value="">Select Type</option>
+            <option>Unit Test</option><option>Periodic Test</option>
+            <option>Half-Yearly Examination</option><option>Annual Examination</option>
+            <option>Pre-Board Examination</option><option>Class Test</option>
+            <option>Surprise Test</option><option>Practice Paper</option><option>Sample Paper</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">Set</label>
+          <select class="fc" id="paperSet">
+            <option value="">— None —</option>
+            <option>Set 1</option><option>Set 2</option><option>Set 3</option>
+            <option>Set A</option><option>Set B</option><option>Set C</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">Max Marks *</label>
+          <select class="fc" id="maxMarks" onchange="toggleCust('Marks');updateStats()">
+            <option value="100">100</option><option value="80">80</option>
+            <option value="70">70</option><option value="50">50</option>
+            <option value="40">40</option><option value="30">30</option>
+            <option value="20">20</option><option value="custom">Custom…</option>
+          </select>
+        </div>
+        <div class="fg" id="custMarksG" style="display:none">
+          <label class="fl">Custom Marks</label>
+          <input type="number" class="fc" id="custMarks" placeholder="Enter value" oninput="updateStats()"/>
+        </div>
+        <div class="fg">
+          <label class="fl">Duration</label>
+          <select class="fc" id="duration" onchange="toggleCust('Dur')">
+            <option value="60">1 Hour</option><option value="90">1.5 Hours</option>
+            <option value="120">2 Hours</option><option value="180" selected>3 Hours</option>
+            <option value="custom">Custom…</option>
+          </select>
+        </div>
+        <div class="fg" id="custDurG" style="display:none">
+          <label class="fl">Custom Duration (mins)</label>
+          <input type="number" class="fc" id="custDur" placeholder="e.g. 150"/>
+        </div>
+        <div class="fg">
+          <label class="fl">Academic Year</label>
+          <input class="fc" id="academicYear" placeholder="e.g. 2025–26"/>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step-nav">
+    <div></div>
+    <button class="btn btn-k" onclick="showStep(2)">Next: Sections &amp; Questions →</button>
+  </div>
+</div><!-- /step1 -->
+
+<!-- ══ STEP 2: Sections & Questions ═════════ -->
+<div class="pane" id="step2">
+  <div class="step-row">
+    <div class="step-cell sc-done" onclick="showStep(1)"><div class="sc-num">✓</div><div class="sc-lbl">Details</div></div>
+    <div class="step-cell sc-active"><div class="sc-num">2</div><div class="sc-lbl">Sections</div></div>
+    <div class="step-cell" onclick="showStep(3)"><div class="sc-num">3</div><div class="sc-lbl">Instructions</div></div>
+    <div class="step-cell" onclick="showStep(4)"><div class="sc-num">4</div><div class="sc-lbl">Preview</div></div>
+  </div>
+
+  <div class="row-sb" style="margin-bottom:14px">
+    <div>
+      <div style="font-size:16px;font-weight:800">Sections &amp; Questions</div>
+      <div class="t-sm muted" style="margin-top:2px">Add sections (A, B, C…) and questions. Each section has its own settings.</div>
+    </div>
+    <button class="btn btn-k" onclick="addSection()">+ Add Section</button>
+  </div>
+
+  <div id="secs-container"></div>
+  <div id="secs-empty" class="no-secs">
+    <div style="font-size:32px;margin-bottom:8px;opacity:.4">📂</div>
+    <div style="font-size:14px;font-weight:700;margin-bottom:4px">No sections yet</div>
+    <div class="t-sm">Click <strong>"+ Add Section"</strong> to start building your exam paper.</div>
+    <button class="btn btn-k btn-sm" style="margin-top:12px" onclick="addSection()">+ Add First Section</button>
+  </div>
+
+  <div class="step-nav">
+    <button class="btn btn-w" onclick="showStep(1)">← Back</button>
+    <button class="btn btn-k" onclick="showStep(3)">Next: Instructions →</button>
+  </div>
+</div><!-- /step2 -->
+
+<!-- ══ STEP 3: Instructions ═════════════════ -->
+<div class="pane" id="step3">
+  <div class="step-row">
+    <div class="step-cell sc-done" onclick="showStep(1)"><div class="sc-num">✓</div><div class="sc-lbl">Details</div></div>
+    <div class="step-cell sc-done" onclick="showStep(2)"><div class="sc-num">✓</div><div class="sc-lbl">Sections</div></div>
+    <div class="step-cell sc-active"><div class="sc-num">3</div><div class="sc-lbl">Instructions</div></div>
+    <div class="step-cell" onclick="showStep(4)"><div class="sc-num">4</div><div class="sc-lbl">Preview</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">
+      <div><div class="card-h-title">General Instructions</div><div class="card-h-sub">Appear at the top of the paper before Section A</div></div>
+      <button class="btn btn-k btn-sm" onclick="addInstr('')">+ Add Custom</button>
+    </div>
+    <div class="card-b">
+      <div class="t-sm" style="font-weight:600;color:var(--g6);margin-bottom:7px">Quick-add common instructions:</div>
+      <div class="preset-wrap" id="preset-wrap"></div>
+      <div class="sep"></div>
+      <div id="instr-list" class="instr-list"></div>
+      <div id="instr-empty" class="t-sm muted" style="padding:8px 0">No instructions yet. Use presets or click "+ Add Custom".</div>
+    </div>
+  </div>
+
+  <div class="step-nav">
+    <button class="btn btn-w" onclick="showStep(2)">← Back</button>
+    <button class="btn btn-k" onclick="showStep(4)">Next: Preview →</button>
+  </div>
+</div><!-- /step3 -->
+
+<!-- ══ STEP 4: Preview ══════════════════════ -->
+<div class="pane" id="step4">
+  <div class="step-row">
+    <div class="step-cell sc-done" onclick="showStep(1)"><div class="sc-num">✓</div><div class="sc-lbl">Details</div></div>
+    <div class="step-cell sc-done" onclick="showStep(2)"><div class="sc-num">✓</div><div class="sc-lbl">Sections</div></div>
+    <div class="step-cell sc-done" onclick="showStep(3)"><div class="sc-num">✓</div><div class="sc-lbl">Instructions</div></div>
+    <div class="step-cell sc-active"><div class="sc-num">4</div><div class="sc-lbl">Preview</div></div>
+  </div>
+
+  <div class="row-sb" style="margin-bottom:14px">
+    <div>
+      <div style="font-size:16px;font-weight:800">Paper Preview</div>
+      <div class="t-sm muted" style="margin-top:2px">Approximate A4 layout of your exam paper</div>
+    </div>
+    <button class="btn btn-k" onclick="generateDocx()">⬇ Download .docx</button>
+  </div>
+
+  <div class="preview-wrap">
+    <div class="preview-a4" id="preview-out"></div>
+  </div>
+
+  <div class="step-nav">
+    <button class="btn btn-w" onclick="showStep(3)">← Back</button>
+    <button class="btn btn-k" onclick="generateDocx()">⬇ Download .docx</button>
+  </div>
+</div><!-- /step4 -->
+
+</div><!-- /main -->
+</div><!-- /workspace -->
+</div><!-- /shell -->
+
+<!-- ── Question Modal ───────────────────── -->
+<div class="modal-bg" id="q-modal" onclick="bgClose(event)">
+  <div class="modal" id="modal-inner">
+    <div class="modal-top">
+      <span class="modal-title" id="modal-title-text">Add Question</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-content"></div>
+    <div class="modal-foot">
+      <button class="btn btn-w" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-k" onclick="saveQ()">Save Question</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Loader ────────────────────────────── -->
+<div class="loader-bg" id="loader">
+  <div class="loader-box">
+    <div class="spinner"></div>
+    <div style="font-weight:700">Generating .docx…</div>
+    <div class="t-sm muted" style="margin-top:4px">Please wait</div>
+  </div>
+</div>
+
+<!-- ── Toast ─────────────────────────────── -->
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+// ════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════
+let sections = [], instrs = [], secUid = 0;
+let ms = { suid: null, editIdx: null, qtype: 'mcq' };  // modal state
+
+const QT = [
+  {k:'mcq',  l:'MCQ',             i:'🔘'},
+  {k:'vsa',  l:'Very Short',      i:'✏️'},
+  {k:'sa',   l:'Short Answer',    i:'📝'},
+  {k:'la',   l:'Long Answer',     i:'📖'},
+  {k:'fill_blanks', l:'Fill Blanks', i:'✒️'},
+  {k:'match',l:'Match List',      i:'↔️'},
+  {k:'tf',   l:'True/False',      i:'✓✗'},
+  {k:'ar',   l:'Assertion-Reason',i:'⚖️'},
+  {k:'comp', l:'Comprehension',   i:'📄'},
+  {k:'case', l:'Case-Based',      i:'📊'},
+  {k:'num',  l:'Numerical',       i:'🔢'},
+  {k:'def',  l:'Definition',      i:'📌'},
+];
+const PRESETS = [
+  'All questions are compulsory.',
+  'The question paper is divided into sections A, B, C and D.',
+  'There is no overall choice. However, internal choice has been provided.',
+  'Use of calculator is not allowed.',
+  'Draw neat and labelled diagrams wherever necessary.',
+  'All parts of a question should be attempted at one place.',
+  'Marks for each question are indicated at the right margin.',
+  'Write legibly and to the point.',
+  'Read all questions carefully before answering.',
+  'Figures in the margin indicate full marks for each question.',
+];
+
+// ════════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════════
+const E = s => s == null ? '' : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const $ = id => document.getElementById(id);
+const getSec = uid => sections.find(s => s._uid === uid);
+const qtl = k => (QT.find(t => t.k === k)||{l:k}).l;
+const qti = k => (QT.find(t => t.k === k)||{i:'?'}).i;
+
+function toast(msg, type='') {
+  const t = $('toast');
+  t.textContent = msg; t.className = 'toast show' + (type?' '+type:'');
+  clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+function getMaxMarks() {
+  const v = $('maxMarks').value;
+  return v==='custom' ? (parseFloat($('custMarks').value)||0) : (parseFloat(v)||0);
+}
+function getDurMins() {
+  const v = $('duration').value;
+  return v==='custom' ? (parseInt($('custDur').value)||0) : (parseInt(v)||0);
+}
+function durStr(m) {
+  if (!m) return '';
+  m = parseInt(m);
+  if (m===60) return '1 Hour'; if (m===90) return '1.5 Hours';
+  if (m===120) return '2 Hours'; if (m===180) return '3 Hours';
+  return m % 60 === 0 ? (m/60)+' Hours' : m+' Minutes';
+}
+function fmtQNum(n, style) {
+  if (!style || style==='1, 2, 3...') return n+'.';
+  if (style==='Q1, Q2, Q3...') return 'Q'+n+'.';
+  const R=['','i','ii','iii','iv','v','vi','vii','viii','ix','x','xi','xii','xiii','xiv','xv','xvi','xvii','xviii','xix','xx'];
+  if (style==='i, ii, iii...') return (R[n]||n)+'.';
+  if (style==='(a), (b), (c)...') return '('+String.fromCharCode(96+n)+')';
+  return n+'.';
+}
+
+// ════════════════════════════════════════════
+// NAVIGATION
+// ════════════════════════════════════════════
+function showStep(n) {
+  document.querySelectorAll('.pane').forEach((p,i) => p.classList.toggle('active', i+1===n));
+  [1,2,3,4].forEach(i => {
+    const nav = $('nav'+i), ns = $('ns'+i);
+    nav.className = 'nav-item' + (i===n?' active':(i<n?' done':''));
+    ns.textContent = i<n ? '✓' : i;
+  });
+  if (n===4) renderPreview();
+}
+
+// ════════════════════════════════════════════
+// STATS
+// ════════════════════════════════════════════
+function updateStats() {
+  const totalQ = sections.reduce((s,sec)=>s+(sec.questions||[]).length,0);
+  const usedM = sections.reduce((s,sec)=>s+(parseFloat(sec.totalMarks)||0),0);
+  const maxM = getMaxMarks();
+  $('s-sec').textContent = sections.length;
+  $('s-q').textContent = totalQ;
+  $('s-m').textContent = usedM;
+  $('s-mm').textContent = maxM||'—';
+  $('s-m').className = 'sb-stat-val'+(maxM&&usedM>maxM?' marks-over':usedM===maxM&&maxM?' marks-full':'');
+  const mbw = $('mb-wrap');
+  if (maxM>0) {
+    mbw.style.display='block';
+    const pct=Math.min(100,Math.round(usedM/maxM*100));
+    $('mb-fill').style.width=pct+'%';
+    $('mb-label').textContent=pct+'% assigned';
+  } else mbw.style.display='none';
+}
+function autoFillCode() {
+  const sel=$('subject'), opt=sel.options[sel.selectedIndex];
+  if (opt&&opt.dataset.code) $('subjectCode').value=opt.dataset.code;
+}
+function toggleCust(t) {
+  if (t==='Marks') $('custMarksG').style.display=$('maxMarks').value==='custom'?'flex':'none';
+  else $('custDurG').style.display=$('duration').value==='custom'?'flex':'none';
+}
+
+// ════════════════════════════════════════════
+// SECTIONS
+// ════════════════════════════════════════════
+function addSection() {
+  const LETTERS='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const uid=++secUid;
+  const sec={_uid:uid,id:LETTERS[sections.length]||String(sections.length+1),name:'',totalMarks:'',instructions:'',questionNumberStyle:'1, 2, 3...',enabled:true,questions:[],_open:true};
+  sections.push(sec);
+  reLetter();
+  insertSecCard(sec);
+  updateStats();
+  setTimeout(()=>{const el=$('sec-'+uid);if(el)el.scrollIntoView({behavior:'smooth',block:'nearest'});},60);
+}
+
+function reLetter() {
+  const L='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  sections.forEach((s,i)=>{s.id=L[i]||String(i+1);});
+}
+
+function delSection(uid) {
+  if (!confirm('Delete this entire section and all its questions?')) return;
+  sections=sections.filter(s=>s._uid!==uid);
+  reLetter();
+  const el=$('sec-'+uid); if(el) el.remove();
+  sections.forEach(s=>{ const le=$('sltr-'+s._uid); if(le) le.textContent=s.id; });
+  const emp=$('secs-empty');
+  if (sections.length===0&&emp) emp.style.display='block';
+  updateStats();
+}
+
+function toggleSec(uid) {
+  const sec=getSec(uid); if(!sec) return;
+  sec._open=!sec._open;
+  const body=$('sbody-'+uid), chev=$('schev-'+uid);
+  if(body) body.classList.toggle('open',sec._open);
+  if(chev) chev.classList.toggle('open',sec._open);
+}
+
+function onSecInput(uid,field,val) {
+  const sec=getSec(uid); if(!sec) return;
+  sec[field]=val;
+  // Update header displays
+  const nm=$('sname-'+uid); if(nm) nm.textContent=sec.name||('Section '+sec.id);
+  const mt=$('smeta-'+uid); if(mt) mt.textContent=(sec.questions||[]).length+' question(s)'+(sec.totalMarks?' · '+sec.totalMarks+' marks':'');
+  updateStats();
+}
+
+function insertSecCard(sec) {
+  const emp=$('secs-empty'); if(emp) emp.style.display='none';
+  const container=$('secs-container');
+  const div=document.createElement('div'); div.innerHTML=buildSecHTML(sec);
+  container.appendChild(div.firstElementChild);
+}
+
+function buildSecHTML(sec) {
+  const numStyles=['1, 2, 3...','Q1, Q2, Q3...','i, ii, iii...','(a), (b), (c)...'];
+  return `
+  <div class="sec-card" id="sec-${sec._uid}">
+    <div class="sec-head" onclick="toggleSec(${sec._uid})">
+      <div class="sec-letter" id="sltr-${sec._uid}">${E(sec.id)}</div>
+      <div class="sec-head-inner">
+        <div class="sec-info">
+          <div class="sec-name-disp" id="sname-${sec._uid}">${sec.name||'Section '+sec.id}</div>
+          <div class="sec-meta-disp" id="smeta-${sec._uid}">${(sec.questions||[]).length} question(s)${sec.totalMarks?' · '+sec.totalMarks+' marks':''}</div>
+        </div>
+        <div class="sec-badges" onclick="event.stopPropagation()">
+          <button class="btn btn-ghost btn-xs" onclick="delSection(${sec._uid})">🗑 Delete</button>
+        </div>
+        <span class="sec-chev${sec._open?' open':''}" id="schev-${sec._uid}">▼</span>
+      </div>
+    </div>
+    <div class="sec-body${sec._open?' open':''}" id="sbody-${sec._uid}">
+      <div class="sec-cfg">
+        <div class="fg-grid">
+          <div class="fg">
+            <label class="fl">Section Name</label>
+            <input class="fc" placeholder="e.g. MCQs / Short Answer" value="${E(sec.name)}"
+              oninput="onSecInput(${sec._uid},'name',this.value)"/>
+          </div>
+          <div class="fg">
+            <label class="fl">Section Total Marks</label>
+            <input type="number" class="fc" placeholder="e.g. 20" value="${E(sec.totalMarks)}"
+              oninput="onSecInput(${sec._uid},'totalMarks',this.value)"/>
+          </div>
+          <div class="fg">
+            <label class="fl">Question Numbering</label>
+            <select class="fc" onchange="onSecInput(${sec._uid},'questionNumberStyle',this.value)">
+              ${numStyles.map(s=>`<option value="${s}"${sec.questionNumberStyle===s?' selected':''}>${s}</option>`).join('')}
+            </select>
+          </div>
+          <div class="fg">
+            <label class="fl">Section Instructions</label>
+            <input class="fc" placeholder="e.g. Attempt any 5 questions." value="${E(sec.instructions)}"
+              oninput="onSecInput(${sec._uid},'instructions',this.value)"/>
+          </div>
+        </div>
+      </div>
+      <div class="sec-qs">
+        <div class="row-sb" style="margin-bottom:10px">
+          <div style="font-size:13px;font-weight:700">Questions <span class="muted t-sm" id="sqc-${sec._uid}">(${(sec.questions||[]).length})</span></div>
+          <button class="btn btn-k btn-sm" onclick="openAddQ(${sec._uid})">+ Add Question</button>
+        </div>
+        <div id="qlist-${sec._uid}" class="q-list"></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ════════════════════════════════════════════
+// QUESTION RENDERING
+// ════════════════════════════════════════════
+function renderQs(sec) {
+  const list=$('qlist-'+sec._uid), cnt=$('sqc-'+sec._uid), meta=$('smeta-'+sec._uid);
+  if (!list) return;
+  if (cnt) cnt.textContent='('+(sec.questions||[]).length+')';
+  if (meta) meta.textContent=(sec.questions||[]).length+' question(s)'+(sec.totalMarks?' · '+sec.totalMarks+' marks':'');
+
+  if (!sec.questions||sec.questions.length===0) {
+    list.innerHTML=`<div class="empty-qs"><div class="empty-icon">❓</div><div style="font-size:13px;font-weight:600;margin-bottom:3px">No questions yet</div><div class="t-sm">Click <strong>"+ Add Question"</strong> to add your first question here.</div></div>`;
+    return;
+  }
+  list.innerHTML=sec.questions.map((q,qi)=>buildQHTML(q,qi,sec._uid)).join('');
+}
+
+function buildQHTML(q,qi,suid) {
+  const type=q.type||'sa';
+  let body='';
+
+  // Passage / Case
+  if ((type==='comp'||type==='case')&&(q.passage||q.caseText)) {
+    const txt=(q.passage||q.caseText||'');
+    body+=`<div class="detail-block"><div class="detail-lbl">${type==='comp'?'Passage':'Case Text'}</div><div class="passage-box">${E(txt.substring(0,220))}${txt.length>220?'…':''}</div></div>`;
+  }
+  // A-R
+  if (type==='ar'&&(q.assertion||q.reason)) {
+    body+=`<div class="detail-block ar-block">${q.assertion?`<div><strong>Assertion (A):</strong> ${E(q.assertion)}</div>`:''} ${q.reason?`<div><strong>Reason (R):</strong> ${E(q.reason)}</div>`:''}</div>`;
+  }
+  // MCQ Options
+  if (type==='mcq'&&q.options&&q.options.length) {
+    const L=['A','B','C','D','E','F'], corr=q.correctAnswers||[];
+    body+=`<div class="detail-block"><div class="detail-lbl">Options</div><div class="opts-grid">${q.options.map((o,oi)=>`<div class="opt-row"><div class="opt-ltr">${L[oi]||oi+1}.</div><div class="${corr.includes(oi)?'opt-correct':'opt-txt'}">${E(o)}${corr.includes(oi)?' ✓':''}</div></div>`).join('')}</div></div>`;
+  }
+  // Fill blanks
+  if (type==='fill_blanks'&&q.blanks&&q.blanks.filter(Boolean).length) {
+    body+=`<div class="detail-block"><div class="detail-lbl">Statements</div><div class="fill-stmts">${q.blanks.filter(Boolean).map((b,bi)=>`<div class="fill-stmt">${bi+1}. ${E(b)}</div>`).join('')}</div></div>`;
+  }
+  // Match
+  if (type==='match'&&((q.columnA&&q.columnA.length)||(q.columnB&&q.columnB.length))) {
+    const mlen=Math.max((q.columnA||[]).length,(q.columnB||[]).length);
+    body+=`<div class="detail-block"><div class="detail-lbl">Columns</div><div class="match-grid"><div class="match-col-hdr">Column A</div><div class="match-col-hdr">Column B</div>${Array.from({length:mlen},(_,i)=>`<div class="match-row">${i+1}. ${E((q.columnA||[])[i]||'')}</div><div class="match-row">${String.fromCharCode(65+i)}. ${E((q.columnB||[])[i]||'')}</div>`).join('')}</div></div>`;
+  }
+  // Parts
+  if (q.parts&&q.parts.length) {
+    body+=`<div class="detail-block"><div class="detail-lbl">Parts (${q.parts.length})</div><div class="parts-list">${q.parts.map((p,pi)=>`<div class="part-disp"><div class="part-disp-lbl">(${String.fromCharCode(97+pi)})</div><div class="part-disp-txt">${E(p.text||'')}</div>${p.marks?`<div class="part-disp-m">[${p.marks}]</div>`:''}</div>`).join('')}</div></div>`;
+  }
+  // Answer lines note
+  if (q.answerLines&&parseInt(q.answerLines)>0) {
+    body+=`<div class="t-sm muted" style="margin-top:5px">📏 ${q.answerLines} answer line(s)</div>`;
+  }
+
+  return `
+  <div class="q-item" id="qi-${suid}-${qi}">
+    <div class="q-head">
+      <div class="q-circle">${qi+1}</div>
+      <div class="q-hc">
+        <div class="q-text-disp">${E(q.text||'(No question text)')}</div>
+        <div class="q-meta">
+          <span class="q-type-tag qtag-${type}">${qtl(type)}</span>
+          ${q.marks?`<span class="marks-tag">[${q.marks} mark${parseFloat(q.marks)!==1?'s':''}]</span>`:''}
+          ${(q.parts||[]).length?`<span class="meta-note">${q.parts.length} part(s)</span>`:''}
+          ${type==='mcq'&&q.options?`<span class="meta-note">${q.options.length} options</span>`:''}
+          ${q.answerLines&&q.answerLines>0?`<span class="meta-note">${q.answerLines} lines</span>`:''}
+        </div>
+      </div>
+      <div class="q-acts">
+        <button class="icon-btn" onclick="openEditQ(${suid},${qi})" title="Edit">✏️</button>
+        <button class="icon-btn" onclick="dupQ(${suid},${qi})" title="Duplicate">⧉</button>
+        <button class="icon-btn" style="color:#b00" onclick="delQ(${suid},${qi})" title="Delete">🗑</button>
+      </div>
+    </div>
+    ${body?`<div class="q-body">${body}</div>`:''}
+  </div>`;
+}
+
+function dupQ(suid,qi) {
+  const sec=getSec(suid); if(!sec) return;
+  sec.questions.splice(qi+1,0,JSON.parse(JSON.stringify(sec.questions[qi])));
+  renderQs(sec); updateStats(); toast('Question duplicated');
+}
+function delQ(suid,qi) {
+  const sec=getSec(suid); if(!sec) return;
+  sec.questions.splice(qi,1); renderQs(sec); updateStats(); toast('Question deleted');
+}
+
+// ════════════════════════════════════════════
+// MODAL
+// ════════════════════════════════════════════
+function openAddQ(suid) {
+  ms={suid,editIdx:null,qtype:'mcq'};
+  $('modal-title-text').textContent='Add Question';
+  buildModalHTML({type:'mcq',text:'',marks:1,answerLines:0,options:['','','',''],correctAnswers:[],parts:[]});
+  $('q-modal').classList.add('open');
+}
+function openEditQ(suid,qi) {
+  const sec=getSec(suid); if(!sec) return;
+  const q=JSON.parse(JSON.stringify(sec.questions[qi]));
+  ms={suid,editIdx:qi,qtype:q.type||'mcq'};
+  $('modal-title-text').textContent='Edit Question';
+  buildModalHTML(q);
+  $('q-modal').classList.add('open');
+}
+function closeModal() { $('q-modal').classList.remove('open'); }
+function bgClose(e) { if(e.target===$('q-modal')) closeModal(); }
+
+function buildModalHTML(q) {
+  const type=q.type||ms.qtype;
+  ms.qtype=type;
+  const picker=QT.map(t=>`
+    <div class="type-tile${t.k===type?' sel':''}" onclick="changeType('${t.k}')" data-type="${t.k}">
+      <div class="tt-icon">${t.i}</div>
+      <div class="tt-name">${t.l}</div>
+    </div>`).join('');
+
+  $('modal-content').innerHTML=`
+    <div class="fg" style="margin-bottom:14px">
+      <label class="fl">Question Type</label>
+      <div class="type-grid mt6">${picker}</div>
+    </div>
+    <div class="fg" style="margin-bottom:12px">
+      <label class="fl">Question Text *</label>
+      <textarea class="fc" id="q-text" rows="3" placeholder="Enter full question text here…">${E(q.text||'')}</textarea>
+    </div>
+    <div class="fg-2" style="margin-bottom:12px">
+      <div class="fg"><label class="fl">Marks</label><input type="number" class="fc" id="q-marks" value="${q.marks??1}" min="0" step="0.5"/></div>
+      <div class="fg"><label class="fl">Answer Lines (printed)</label><input type="number" class="fc" id="q-lines" value="${q.answerLines||0}" min="0" max="25"/></div>
+    </div>
+    <div id="type-spec">${buildTypeSpec(type,q)}</div>
+    <div class="sep-dashed" style="margin:14px 0"></div>
+    <div class="row-sb" style="margin-bottom:8px">
+      <div class="fl" style="margin:0">Parts (a), (b)… <span style="font-weight:400;text-transform:none;color:var(--g5)">optional sub-questions</span></div>
+      <button class="btn btn-ghost btn-xs" onclick="addPart()">+ Add Part</button>
+    </div>
+    <div id="modal-parts" class="parts-editor">
+      ${(q.parts||[]).map((p,pi)=>buildPartHTML(p,pi)).join('')}
+    </div>
+    ${!(q.parts&&q.parts.length)?'<div class="t-sm muted" id="no-parts-msg">No parts added.</div>':''}
+  `;
+}
+
+function buildTypeSpec(type,q) {
+  if (type==='mcq') {
+    const opts=q.options&&q.options.length?q.options:['','','',''];
+    const corr=q.correctAnswers||[];
+    return `<div class="fl" style="margin-bottom:7px">Options — click "Mark ✓" to set correct answer</div>
+      <div class="opts-editor" id="opts-editor">${opts.map((o,oi)=>buildOptRow(o,oi,corr.includes(oi))).join('')}</div>
+      <button class="btn btn-ghost btn-xs" style="margin-top:7px" onclick="addOpt()">+ Add Option</button>`;
+  }
+  if (type==='fill_blanks') {
+    const blanks=q.blanks&&q.blanks.length?q.blanks:[''];
+    return `<div class="fl" style="margin-bottom:7px">Blank Statements (use ___ where blanks go)</div>
+      <div id="blanks-ed" style="display:flex;flex-direction:column;gap:5px">
+        ${blanks.map((b,bi)=>`<div class="opt-edit-row"><div class="opt-ltr-badge" style="border-radius:4px;font-size:11px">${bi+1}</div><input class="fc" data-blank="${bi}" value="${E(b)}" placeholder="The symbol of water is ___."/><button class="icon-btn" onclick="rmBlank(this)">✕</button></div>`).join('')}
+      </div>
+      <button class="btn btn-ghost btn-xs" style="margin-top:7px" onclick="addBlank()">+ Add Statement</button>`;
+  }
+  if (type==='match') {
+    const A=q.columnA&&q.columnA.length?q.columnA:['',''];
+    const B=q.columnB&&q.columnB.length?q.columnB:['',''];
+    return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div><div class="fl" style="margin-bottom:6px">Column A</div><div id="cola-ed" style="display:flex;flex-direction:column;gap:5px">${A.map((item,i)=>`<input class="fc" data-cola="${i}" value="${E(item)}" placeholder="Item ${i+1}"/>`).join('')}</div></div>
+      <div><div class="fl" style="margin-bottom:6px">Column B</div><div id="colb-ed" style="display:flex;flex-direction:column;gap:5px">${B.map((item,i)=>`<input class="fc" data-colb="${i}" value="${E(item)}" placeholder="Item ${i+1}"/>`).join('')}</div></div>
+    </div><button class="btn btn-ghost btn-xs" style="margin-top:7px" onclick="addMatchRow()">+ Add Row</button>`;
+  }
+  if (type==='ar') {
+    return `<div class="fg" style="margin-bottom:10px"><label class="fl">Assertion (A)</label><textarea class="fc" id="q-ar-a" rows="2" placeholder="Write the assertion…">${E(q.assertion||'')}</textarea></div>
+      <div class="fg"><label class="fl">Reason (R)</label><textarea class="fc" id="q-ar-r" rows="2" placeholder="Write the reason…">${E(q.reason||'')}</textarea></div>`;
+  }
+  if (type==='comp') return `<div class="fg"><label class="fl">Passage Text (300-500 words)</label><textarea class="fc" id="q-passage" rows="6" placeholder="Paste reading passage here…">${E(q.passage||'')}</textarea></div>`;
+  if (type==='case') return `<div class="fg"><label class="fl">Case / Paragraph Text</label><textarea class="fc" id="q-case" rows="5" placeholder="Write the case study…">${E(q.caseText||'')}</textarea></div>`;
+  return '';
+}
+
+function buildOptRow(val,idx,isCorrect) {
+  const L=['A','B','C','D','E','F'];
+  return `<div class="opt-edit-row${isCorrect?' is-correct':''}" id="or-${idx}">
+    <div class="opt-ltr-badge">${L[idx]||idx+1}</div>
+    <input class="fc" data-opt="${idx}" value="${E(val)}" placeholder="Option ${L[idx]||idx+1}"/>
+    <button class="opt-correct-btn" onclick="toggleCorr(${idx})">${isCorrect?'✓ Correct':'Mark ✓'}</button>
+    <button class="icon-btn" onclick="rmOpt(${idx})">✕</button>
+  </div>`;
+}
+function buildPartHTML(p,pi) {
+  return `<div class="part-card" id="pc-${pi}">
+    <div class="part-card-h"><span class="part-card-lbl">Part (${String.fromCharCode(97+pi)})</span><button class="icon-btn btn-xs" onclick="rmPart(${pi})">🗑 Remove</button></div>
+    <div class="part-card-b">
+      <div class="fg"><label class="fl">Part Text</label><textarea class="fc" data-pt="${pi}" rows="2" placeholder="Sub-question text…">${E(p.text||'')}</textarea></div>
+      <div class="fg"><label class="fl">Marks</label><input type="number" class="fc" data-pm="${pi}" value="${p.marks||''}" step="0.5" placeholder="—"/></div>
+    </div>
+  </div>`;
+}
+
+function changeType(type) {
+  ms.qtype=type;
+  const cur=collectQ(); cur.type=type;
+  document.querySelectorAll('#q-modal .type-tile').forEach(el=>el.classList.toggle('sel',el.dataset.type===type));
+  $('type-spec').innerHTML=buildTypeSpec(type,cur);
+}
+
+// Options
+function toggleCorr(idx) {
+  const row=$('or-'+idx); if(!row) return;
+  const now=row.classList.toggle('is-correct');
+  row.querySelector('.opt-correct-btn').textContent=now?'✓ Correct':'Mark ✓';
+}
+function addOpt() {
+  const ed=$('opts-editor'), idx=ed.querySelectorAll('[data-opt]').length;
+  const d=document.createElement('div'); d.innerHTML=buildOptRow('',idx,false);
+  ed.appendChild(d.firstElementChild);
+}
+function rmOpt(idx) {
+  const row=$('or-'+idx); if(row) row.remove();
+  $('opts-editor').querySelectorAll('.opt-edit-row').forEach((r,i)=>{
+    r.id='or-'+i;
+    const L=['A','B','C','D','E','F'];
+    r.querySelector('.opt-ltr-badge').textContent=L[i]||i+1;
+    const inp=r.querySelector('[data-opt]'); if(inp) inp.dataset.opt=i;
+    r.querySelector('.opt-correct-btn').setAttribute('onclick',`toggleCorr(${i})`);
+    r.querySelector('.icon-btn').setAttribute('onclick',`rmOpt(${i})`);
+  });
+}
+function addBlank() {
+  const ed=$('blanks-ed'), idx=ed.querySelectorAll('[data-blank]').length;
+  const d=document.createElement('div'); d.className='opt-edit-row';
+  d.innerHTML=`<div class="opt-ltr-badge" style="border-radius:4px;font-size:11px">${idx+1}</div><input class="fc" data-blank="${idx}" placeholder="Statement with ___ for blanks"/><button class="icon-btn" onclick="rmBlank(this)">✕</button>`;
+  ed.appendChild(d);
+}
+function rmBlank(btn) { btn.closest('.opt-edit-row').remove(); }
+function addMatchRow() {
+  const A=$('cola-ed'), B=$('colb-ed'), idx=A.querySelectorAll('[data-cola]').length;
+  const ia=document.createElement('input'); ia.className='fc'; ia.dataset.cola=idx; ia.placeholder=`Item ${idx+1}`; A.appendChild(ia);
+  const ib=document.createElement('input'); ib.className='fc'; ib.dataset.colb=idx; ib.placeholder=`Item ${idx+1}`; B.appendChild(ib);
+}
+function addPart() {
+  const c=$('modal-parts'), idx=c.querySelectorAll('.part-card').length;
+  const msg=$('no-parts-msg'); if(msg) msg.remove();
+  const d=document.createElement('div'); d.innerHTML=buildPartHTML({text:'',marks:''},idx);
+  c.appendChild(d.firstElementChild);
+}
+function rmPart(pi) {
+  const card=$('pc-'+pi); if(card) card.remove();
+  $('modal-parts').querySelectorAll('.part-card').forEach((c,i)=>{
+    c.id='pc-'+i;
+    c.querySelector('.part-card-lbl').textContent=`Part (${String.fromCharCode(97+i)})`;
+    c.querySelector('.icon-btn').setAttribute('onclick',`rmPart(${i})`);
+    const ta=c.querySelector('[data-pt]'); if(ta) ta.dataset.pt=i;
+    const inp=c.querySelector('[data-pm]'); if(inp) inp.dataset.pm=i;
+  });
+}
+
+function collectQ() {
+  const q={};
+  q.type=ms.qtype;
+  q.text=($('q-text')?.value||'').trim();
+  q.marks=parseFloat($('q-marks')?.value)||0;
+  q.answerLines=parseInt($('q-lines')?.value)||0;
+  if (q.type==='mcq') {
+    q.options=Array.from(document.querySelectorAll('#opts-editor [data-opt]')).map(el=>el.value);
+    q.correctAnswers=Array.from(document.querySelectorAll('#opts-editor .opt-edit-row.is-correct')).map(r=>{const i=r.querySelector('[data-opt]');return i?parseInt(i.dataset.opt):-1;}).filter(n=>n>=0);
+  } else if (q.type==='fill_blanks') {
+    q.blanks=Array.from(document.querySelectorAll('#blanks-ed [data-blank]')).map(el=>el.value);
+  } else if (q.type==='match') {
+    q.columnA=Array.from(document.querySelectorAll('#cola-ed [data-cola]')).map(el=>el.value);
+    q.columnB=Array.from(document.querySelectorAll('#colb-ed [data-colb]')).map(el=>el.value);
+  } else if (q.type==='ar') {
+    q.assertion=$('q-ar-a')?.value||''; q.reason=$('q-ar-r')?.value||'';
+  } else if (q.type==='comp') { q.passage=$('q-passage')?.value||''; }
+  else if (q.type==='case')   { q.caseText=$('q-case')?.value||''; }
+  q.parts=[];
+  document.querySelectorAll('#modal-parts .part-card').forEach(c=>{
+    const ta=c.querySelector('[data-pt]'), inp=c.querySelector('[data-pm]');
+    q.parts.push({text:ta?.value||'',marks:parseFloat(inp?.value)||''});
+  });
+  return q;
+}
+
+function saveQ() {
+  const q=collectQ();
+  if (!q.text) { toast('Please enter question text','err'); return; }
+  const sec=getSec(ms.suid); if(!sec){toast('Section not found','err');return;}
+  if (ms.editIdx!==null) { sec.questions[ms.editIdx]=q; toast('Question updated ✓','ok'); }
+  else { sec.questions.push(q); toast('Question added ✓','ok'); }
+  closeModal(); renderQs(sec); updateStats();
+}
+
+// ════════════════════════════════════════════
+// INSTRUCTIONS
+// ════════════════════════════════════════════
+function renderPresets() {
+  const wrap=$('preset-wrap'); if(!wrap) return;
+  wrap.innerHTML=PRESETS.map(p=>{
+    const used=instrs.includes(p);
+    return `<div class="preset-chip${used?' used':''}" onclick="${used?'':'addInstr('+JSON.stringify(p)+')'}" title="${E(p)}">${E(p.substring(0,55))}${p.length>55?'…':''}</div>`;
+  }).join('');
+}
+function renderInstrs() {
+  const list=$('instr-list'), emp=$('instr-empty'); if(!list) return;
+  if (!instrs.length) { list.innerHTML=''; if(emp) emp.style.display='block'; return; }
+  if(emp) emp.style.display='none';
+  list.innerHTML=instrs.map((s,i)=>`
+    <div class="instr-row" id="ir-${i}">
+      <div class="instr-num">${i+1}.</div>
+      <input class="fc" value="${E(s)}" oninput="instrs[${i}]=this.value;renderPresets()"/>
+      <button class="icon-btn" onclick="rmInstr(${i})">✕</button>
+    </div>`).join('');
+}
+function addInstr(text) {
+  instrs.push(text||''); renderPresets(); renderInstrs();
+  if (!text) setTimeout(()=>{const inputs=document.querySelectorAll('#instr-list input');if(inputs.length)inputs[inputs.length-1].focus();},40);
+}
+function rmInstr(i) { instrs.splice(i,1); renderPresets(); renderInstrs(); }
+
+// ════════════════════════════════════════════
+// PREVIEW
+// ════════════════════════════════════════════
+function renderPreview() {
+  const el=$('preview-out');
+  const school=$('schoolName').value, exam=$('examType').value;
+  const a1=$('schoolAddr1').value, a2=$('schoolAddr2').value;
+  const cls=$('classGrade').value, subj=$('subject').value;
+  const code=$('subjectCode').value, set=$('paperSet').value;
+  const maxM=getMaxMarks(), dur=getDurMins(), ay=$('academicYear').value;
+
+  let h='';
+  if(school) h+=`<div class="pv-school">${E(school)}</div>`;
+  if(exam)   h+=`<div class="pv-exam">${E(exam)}</div>`;
+  const addr=[a1,a2].filter(Boolean).join(', ');
+  if(addr)   h+=`<div class="pv-addr">${E(addr)}</div>`;
+  h+=`<div class="pv-rule"></div>`;
+  const mp=[];
+  if(cls)  mp.push('Class: '+cls);
+  if(subj) mp.push('Subject: '+subj+(code?' ('+code+')':''));
+  if(set)  mp.push('Set: '+set);
+  if(maxM) mp.push('Max. Marks: '+maxM);
+  if(dur)  mp.push('Time: '+durStr(dur));
+  if(ay)   mp.push('Academic Year: '+ay);
+  if(mp.length) h+=`<div class="pv-meta">${mp.join(' &ensp;|&ensp; ')}</div>`;
+  h+=`<div class="pv-rule"></div>`;
+  if(instrs.length) {
+    h+=`<div class="pv-ih">General Instructions:</div><ol class="pv-il">${instrs.map(i=>`<li>${E(i)}</li>`).join('')}</ol>`;
+    h+=`<div class="pv-rule" style="margin-top:8px"></div>`;
+  }
+
+  let qc=1;
+  sections.forEach(sec=>{
+    h+=`<div class="pv-sec">Section ${sec.id}${sec.name?' — '+sec.name:''}${sec.totalMarks?' ['+sec.totalMarks+' Marks]':''}</div>`;
+    if(sec.instructions) h+=`<div class="pv-si">${E(sec.instructions)}</div>`;
+    (sec.questions||[]).forEach(q=>{
+      const qn=fmtQNum(qc++,sec.questionNumberStyle);
+      h+=`<div class="pv-qr"><div class="pv-qnum">${qn}</div><div class="pv-qb"><div class="pv-qt">${E(q.text||'')}</div>`;
+      if(q.type==='mcq'&&q.options) h+=`<div class="pv-opts">${q.options.map((o,oi)=>`<span>(${String.fromCharCode(97+oi)}) ${E(o)}</span>`).join('')}</div>`;
+      else if(q.type==='ar') h+=`<div style="font-size:10pt;margin-top:4px"><strong>A:</strong> ${E(q.assertion||'')}</div><div style="font-size:10pt"><strong>R:</strong> ${E(q.reason||'')}</div>`;
+      else if((q.type==='comp'||q.type==='case')&&(q.passage||q.caseText)) h+=`<div class="pv-passage">${E((q.passage||q.caseText||'').substring(0,250))}…</div>`;
+      if(q.parts&&q.parts.length) h+=`<div class="pv-parts">${q.parts.map((p,pi)=>`<div class="pv-part"><span style="font-weight:bold">(${String.fromCharCode(97+pi)})</span><span style="flex:1;margin-left:4px">${E(p.text||'')}</span>${p.marks?`<span style="font-style:italic">[${p.marks}]</span>`:''}</div>`).join('')}</div>`;
+      h+=`</div><div class="pv-qm">${q.marks?'['+q.marks+']':''}</div></div>`;
+    });
+  });
+  if(!sections.length) h='<div style="text-align:center;padding:60px 20px;color:#999;font-family:sans-serif;font-size:13px"><div style="font-size:28px;margin-bottom:10px">📄</div>Add sections and questions to see a preview.</div>';
+  el.innerHTML=h;
+}
+
+// ════════════════════════════════════════════
+// GENERATE
+// ════════════════════════════════════════════
+function buildJSON() {
+  return {
+    metadata:{
+      schoolName:$('schoolName').value, schoolAddressLine1:$('schoolAddr1').value,
+      schoolAddressLine2:$('schoolAddr2').value, class:$('classGrade').value,
+      subject:$('subject').value, subjectCode:$('subjectCode').value,
+      examType:$('examType').value, set:$('paperSet').value,
+      maxMarks:getMaxMarks(), durationMinutes:getDurMins(), academicYear:$('academicYear').value
+    },
+    instructions:instrs.slice(),
+    sections:sections.map(s=>({id:s.id,name:s.name,totalMarks:s.totalMarks,instructions:s.instructions,questionNumberStyle:s.questionNumberStyle,enabled:s.enabled!==false,questions:(s.questions||[]).slice()}))
+  };
+}
+
+async function generateDocx() {
+  const m=buildJSON().metadata;
+  if(!m.schoolName){toast('Please enter School Name first','err');showStep(1);return;}
+  const loader=$('loader'); loader.classList.add('show');
+  try {
+    const r=await fetch('/api/paper/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(buildJSON())});
+    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||'Server error');}
+    const blob=await r.blob(), url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url;
+    a.download=[m.schoolName,m.subject,m.examType].filter(Boolean).join('_').replace(/\s+/g,'_')+'.docx';
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1000);
+    toast('Download started ✓','ok');
+  } catch(e){toast('Error: '+e.message,'err');console.error(e);}
+  finally{loader.classList.remove('show');}
+}
+
+// ════════════════════════════════════════════
+// SAVE / LOAD / CLEAR
+// ════════════════════════════════════════════
+function saveToLocal() {
+  try{localStorage.setItem('ec_draft',JSON.stringify(buildJSON()));toast('Draft saved ✓','ok');}
+  catch(e){toast('Save failed','err');}
+}
+function loadFromLocal() {
+  try{
+    const raw=localStorage.getItem('ec_draft');
+    if(!raw){toast('No saved draft found','err');return;}
+    loadJSON(JSON.parse(raw)); toast('Draft loaded ✓','ok');
+  }catch(e){toast('Load failed','err');}
+}
+function loadJSON(paper) {
+  const m=paper.metadata||{};
+  ['schoolName','schoolAddr1','schoolAddr2','subjectCode','academicYear'].forEach(id=>{
+    const fmap={schoolName:'schoolName',schoolAddr1:'schoolAddressLine1',schoolAddr2:'schoolAddressLine2',subjectCode:'subjectCode',academicYear:'academicYear'};
+    const val=m[id]||m[fmap[id]]||''; $(id).value=val;
+  });
+  $('schoolAddr1').value=m.schoolAddressLine1||'';
+  $('schoolAddr2').value=m.schoolAddressLine2||'';
+  $('classGrade').value=m.class||'';
+  $('examType').value=m.examType||'';
+  $('paperSet').value=m.set||'';
+  const ss=$('subject'); for(const o of ss.options){if(o.value===m.subject){ss.value=m.subject;break;}}
+  const mo=new Set(['100','80','70','50','40','30','20']);
+  if(mo.has(String(m.maxMarks))){$('maxMarks').value=String(m.maxMarks);}
+  else if(m.maxMarks){$('maxMarks').value='custom';$('custMarks').value=m.maxMarks;$('custMarksG').style.display='flex';}
+  const do2=new Set(['60','90','120','180']);
+  if(do2.has(String(m.durationMinutes))){$('duration').value=String(m.durationMinutes);}
+  else if(m.durationMinutes){$('duration').value='custom';$('custDur').value=m.durationMinutes;$('custDurG').style.display='flex';}
+  instrs=paper.instructions||[];
+  secUid=0; sections=[]; $('secs-container').innerHTML=''; $('secs-empty').style.display='none';
+  (paper.sections||[]).forEach(sec=>{
+    const uid=++secUid;
+    sections.push({...sec,_uid:uid,_open:false,questions:sec.questions||[]});
+    insertSecCard(sections[sections.length-1]);
+  });
+  sections.forEach(sec=>renderQs(sec));
+  renderPresets(); renderInstrs(); updateStats();
+}
+function clearAll() {
+  if(!confirm('Clear everything?')) return;
+  sections=[]; instrs=[]; secUid=0;
+  ['schoolName','schoolAddr1','schoolAddr2','subjectCode','academicYear'].forEach(id=>$(id).value='');
+  ['classGrade','subject','examType','paperSet'].forEach(id=>$(id).value='');
+  $('maxMarks').value='100'; $('duration').value='180';
+  $('secs-container').innerHTML=''; $('secs-empty').style.display='block';
+  renderPresets(); renderInstrs(); updateStats(); toast('Cleared');
+}
+
+// ════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded',()=>{
+  const now=new Date(), yr=now.getFullYear(), mo=now.getMonth();
+  $('academicYear').value=mo>=3?`${yr}–${yr+1}`:`${yr-1}–${yr}`;
+  renderPresets(); renderInstrs(); updateStats();
+  document.addEventListener('keydown',e=>{
+    if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();saveToLocal();}
+    if(e.key==='Escape') closeModal();
+  });
+});
+</script>
+</body>
+</html>
